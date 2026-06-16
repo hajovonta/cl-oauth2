@@ -7,4 +7,8 @@
   :version "0.0.1"
   :serial t
   :components ((:file "package")
-               (:file "cl-oauth2")))
+               (:file "core")
+               (:file "token")
+               (:file "jwt")
+               (:file "discovery")
+               (:file "flows")))
