@@ -1,10 +1,11 @@
 ;;;; cl-oauth2.asd
 
 (asdf:defsystem #:cl-oauth2
-  :description "Describe cl-oauth2 here"
-  :author "Your Name <your.name@example.com>"
-  :license  "Specify license here"
-  :version "0.0.1"
+  :description "OAuth 2.0 and OpenID Connect client library for Common Lisp"
+  :author "Hajovonta"
+  :license "MIT"
+  :version "0.1.0"
+  :depends-on (#:babel #:cl-base64 #:dexador #:ironclad #:quri #:yason)
   :serial t
   :components ((:file "package")
                (:file "core")
