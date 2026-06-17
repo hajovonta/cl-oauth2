@@ -1,12 +1,12 @@
 # Roadmap
 
-## v0.2.0
+## v0.2.0 ✅
 
-- [ ] ES256 (ECDSA P-256) signature verification in `verify-jwt`
-- [ ] Token caching/storage layer (in-memory + optional file-backed)
-- [ ] Auto-refresh: wrap API calls to transparently refresh expired tokens
-- [ ] `introspect-token` — RFC 7662 token introspection endpoint support
-- [ ] `revoke-token` — RFC 7009 token revocation
+- [x] ES256 (ECDSA P-256) signature verification in `verify-jwt`
+- [x] Token caching/storage layer (in-memory with max-entries eviction)
+- [x] Auto-refresh: `with-token` wraps API calls with automatic token management
+- [x] `introspect-token` — RFC 7662 token introspection endpoint support
+- [x] `revoke-token` — RFC 7009 token revocation
 
 ## v0.3.0
 
