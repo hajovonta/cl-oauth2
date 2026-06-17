@@ -1,6 +1,6 @@
 # Module: jwt
 
-**Functions:** 5
+**Functions:** 7
 
 **Depends on:** core
 
@@ -10,5 +10,7 @@
 - `decode-jwt`
 - `jwt-claims`
 - `jwt-header`
+- `validate-claims`
 - `verify-jwt`
+- `verify-signature`
 

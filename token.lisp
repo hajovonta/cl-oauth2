@@ -24,15 +24,17 @@
                :error-code err
                :error-description (cdr (assoc "error_description" json :test #'string=))
                :error-uri (cdr (assoc "error_uri" json :test #'string=)))))
-    (let ((expires-in (cdr (assoc "expires_in" json :test #'string=))))
-      (make-instance 'token-response
-                     :access-token (cdr (assoc "access_token" json :test #'string=))
-                     :token-type (or (cdr (assoc "token_type" json :test #'string=)) "Bearer")
-                     :expires-at (when expires-in
-                                   (+ (get-universal-time) (floor expires-in)))
-                     :refresh-token (cdr (assoc "refresh_token" json :test #'string=))
-                     :id-token (cdr (assoc "id_token" json :test #'string=))
-                     :scope (cdr (assoc "scope" json :test #'string=))))))
+    (let* ((expires-in (cdr (assoc "expires_in" json :test #'string=)))
+           (tok (make-instance 'token-response
+                               :access-token (cdr (assoc "access_token" json :test #'string=))
+                               :token-type (or (cdr (assoc "token_type" json :test #'string=)) "Bearer")
+                               :expires-at (when expires-in
+                                             (+ (get-universal-time) (floor expires-in)))
+                               :refresh-token (cdr (assoc "refresh_token" json :test #'string=))
+                               :id-token (cdr (assoc "id_token" json :test #'string=))
+                               :scope (cdr (assoc "scope" json :test #'string=)))))
+      (on-token-response client tok (cdr (assoc "grant_type" params :test #'string=)))
+      tok)))
 (defun client-credentials-grant (client &key scopes)
   "Obtain token via client_credentials grant (service-to-service)."
   (let ((params (list (cons "grant_type" "client_credentials")
@@ -81,3 +83,9 @@
                           :content params
                           :headers '(("Accept" . "application/json")))))
       (yason:parse body :object-as :alist :object-key-fn #'identity))))
+
+(defgeneric on-token-response (client token-response grant-type)
+  (:documentation "Hook called after every successful token response. Specialize to add logging/metrics.")
+  (:method (client token-response grant-type)
+    (declare (ignore client token-response grant-type))
+    nil))

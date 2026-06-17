@@ -46,7 +46,9 @@
 
 
 
+
 (defgeneric oauth2-error-code ())
+
 
 
 
@@ -54,7 +56,9 @@
 
 
 
+
 (defgeneric redirect-uri ())
+
 
 
 
@@ -62,7 +66,9 @@
 
 
 
+
 (defgeneric authorize-uri ())
+
 
 
 
@@ -70,7 +76,9 @@
 
 
 
+
 (defgeneric client-id ())
+
 
 
 
@@ -78,7 +86,9 @@
 
 
 
+
 (defgeneric id-token ())
+
 
 
 
@@ -86,7 +96,9 @@
 
 
 
+
 (defgeneric expires-at ())
+
 
 
 
@@ -103,5 +115,6 @@
     (request-token client params)))
 
 (defgeneric access-token ())
+
 
 

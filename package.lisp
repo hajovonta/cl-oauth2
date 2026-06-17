@@ -22,6 +22,7 @@
            #:generate-pkce
            #:id-token
            #:introspect-token
+           #:jwk-thumbprint
            #:jwt-claims
            #:jwt-header
            #:make-cache
@@ -30,6 +31,7 @@
            #:oauth2-error
            #:oauth2-error-code
            #:oauth2-error-description
+           #:on-token-response
            #:poll-device-token
            #:redirect-uri
            #:refresh

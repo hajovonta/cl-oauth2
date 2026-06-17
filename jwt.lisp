@@ -10,8 +10,9 @@
   (multiple-value-bind (header payload sig) (decode-jwt jwt-string)
     (declare (ignore header sig))
     payload))
-(defun verify-jwt (jwt-string jwks &key issuer audience)
-  "Verify a JWT signature against a JWK set. Returns claims on success."
+(defun verify-jwt (jwt-string jwks &key issuer audience (clock-skew 0))
+  "Verify a JWT signature against a JWK set. Returns claims on success.
+CLOCK-SKEW is seconds of tolerance for expiration checks."
   (multiple-value-bind (header claims sig-b64) (decode-jwt jwt-string)
     (let* ((alg (cdr (assoc "alg" header :test #'string=)))
            (kid (cdr (assoc "kid" header :test #'string=)))
@@ -21,8 +22,8 @@
                     (first keys))))
       (unless jwk
         (error 'oauth2-error :error-code "invalid_key" :error-description "No matching JWK found"))
-      (validate-claims claims :issuer issuer :audience audience)
-      (when (member alg '("RS256" "ES256") :test #'string=)
+      (validate-claims claims :issuer issuer :audience audience :clock-skew clock-skew)
+      (when (member alg '("RS256" "ES256" "HS256") :test #'string=)
         (verify-signature alg jwk
                           (subseq jwt-string 0 (position #\. jwt-string :from-end t))
                           (base64url-decode sig-b64)))
@@ -74,10 +75,19 @@ Returns (values header-alist payload-alist signature-bytes)."
               (s (subseq sig-bytes 32 64)))
          (unless (ironclad:verify-signature pub-key :sha256 msg-hash
                    (ironclad:make-signature :secp256r1 :r r :s s))
-           (error 'oauth2-error :error-code "invalid_signature")))))))
+           (error 'oauth2-error :error-code "invalid_signature"))))
+      ((string= alg "HS256")
+       (let* ((secret (base64url-decode (cdr (assoc "k" jwk :test #'string=))))
+              (mac (ironclad:make-mac :hmac secret :sha256))
+              (input-bytes (babel:string-to-octets signing-input :encoding :utf-8)))
+         (ironclad:update-mac mac input-bytes)
+         (let ((expected (ironclad:produce-mac mac)))
+           (unless (equalp expected sig-bytes)
+             (error 'oauth2-error :error-code "invalid_signature"))))))))
 
-(defun validate-claims (claims &key issuer audience)
-  "Validate JWT claims: issuer, audience, expiration. Signals oauth2-error on mismatch."
+(defun validate-claims (claims &key issuer audience (clock-skew 0))
+  "Validate JWT claims: issuer, audience, expiration. Signals oauth2-error on mismatch.
+CLOCK-SKEW is seconds of tolerance for expiration."
   (when issuer
     (unless (string= issuer (cdr (assoc "iss" claims :test #'string=)))
       (error 'oauth2-error :error-code "invalid_issuer")))
@@ -86,5 +96,33 @@ Returns (values header-alist payload-alist signature-bytes)."
       (unless (if (listp aud) (member audience aud :test #'string=) (string= audience aud))
         (error 'oauth2-error :error-code "invalid_audience"))))
   (let ((exp (cdr (assoc "exp" claims :test #'string=))))
-    (when (and exp (numberp exp) (< exp (- (get-universal-time) 2208988800)))
+    (when (and exp (numberp exp) (< (+ exp clock-skew) (- (get-universal-time) 2208988800)))
       (error 'oauth2-error :error-code "token_expired"))))
+
+(defun base64url-encode (octets)
+  "Encode octets to base64url string (no padding)."
+  (let ((b64 (cl-base64:usb8-array-to-base64-string octets)))
+    (string-right-trim "=" (substitute #\- #\+ (substitute #\_ #\/ b64)))))
+
+(defun jwk-thumbprint (jwk)
+  "Calculate JWK thumbprint per RFC 7638. Returns base64url-encoded SHA-256 hash."
+  (let* ((kty (cdr (assoc "kty" jwk :test #'string=)))
+         ;; RFC 7638: lexicographic order of required members per key type
+         (canonical
+           (cond
+             ((string= kty "RSA")
+              (format nil "{\"e\":\"~A\",\"kty\":\"RSA\",\"n\":\"~A\"}"
+                      (cdr (assoc "e" jwk :test #'string=))
+                      (cdr (assoc "n" jwk :test #'string=))))
+             ((string= kty "EC")
+              (format nil "{\"crv\":\"~A\",\"kty\":\"EC\",\"x\":\"~A\",\"y\":\"~A\"}"
+                      (cdr (assoc "crv" jwk :test #'string=))
+                      (cdr (assoc "x" jwk :test #'string=))
+                      (cdr (assoc "y" jwk :test #'string=))))
+             ((string= kty "oct")
+              (format nil "{\"k\":\"~A\",\"kty\":\"oct\"}"
+                      (cdr (assoc "k" jwk :test #'string=))))
+             (t (error 'oauth2-error :error-code "unsupported_key_type"
+                                     :error-description kty)))))
+    (base64url-encode (ironclad:digest-sequence :sha256
+                        (babel:string-to-octets canonical :encoding :utf-8)))))

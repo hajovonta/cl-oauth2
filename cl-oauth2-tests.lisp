@@ -161,4 +161,49 @@
        (result (cl-oauth2::base64url-decode urlsafe)))
   (is (equalp result (cl-base64:base64-string-to-usb8-array standard)))))
 
-;;; Coverage: 12/26 functions tested
+(test verify-hs256
+  (let* ((secret "supersecretkey12345678901234567890")
+       (secret-bytes (babel:string-to-octets secret :encoding :utf-8))
+       (secret-b64url (cl-oauth2::base64url-encode secret-bytes))
+       (header "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
+       (payload "eyJzdWIiOiJ1c2VyMSIsImlzcyI6InRlc3QiLCJleHAiOjk5OTk5OTk5OTl9")
+       (signing-input (format nil "~A.~A" header payload))
+       (mac (ironclad:make-mac :hmac secret-bytes :sha256)))
+  (ironclad:update-mac mac (babel:string-to-octets signing-input :encoding :utf-8))
+  (let* ((sig (cl-oauth2::base64url-encode (ironclad:produce-mac mac)))
+         (jwt (format nil "~A.~A.~A" header payload sig))
+         (jwks (list (cons "keys" (list (list (cons "kty" "oct") (cons "k" secret-b64url)))))))
+    (let ((claims (cl-oauth2:verify-jwt jwt jwks :issuer "test")))
+      (is (string= "user1" (cdr (assoc "sub" claims :test #'string=))))))))
+
+(test verify-hs256-bad-sig
+  (let* ((secret "wrongkey99999999999999999999999999")
+       (secret-bytes (babel:string-to-octets secret :encoding :utf-8))
+       (secret-b64url (cl-oauth2::base64url-encode secret-bytes))
+       (jwt "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSJ9.badsignature")
+       (jwks (list (cons "keys" (list (list (cons "kty" "oct") (cons "k" secret-b64url)))))))
+  (5am:signals (cl-oauth2:oauth2-error) (cl-oauth2:verify-jwt jwt jwks))))
+
+(test jwk-thumbprint-rsa
+  (let ((tp (cl-oauth2:jwk-thumbprint
+           (list (cons "kty" "RSA")
+                 (cons "n" "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw")
+                 (cons "e" "AQAB")))))
+  ;; RFC 7638 test vector
+  (is (string= "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs" tp))))
+
+(test base64url-roundtrip
+  (is (string= "Hello" (babel:octets-to-string
+                        (cl-oauth2::base64url-decode
+                         (cl-oauth2::base64url-encode
+                          (babel:string-to-octets "Hello" :encoding :utf-8)))
+                        :encoding :utf-8))))
+
+(test verify-jwt-expired
+  ;; Token with exp far in the past (Unix epoch 1000000000 = 2001)
+(let* ((jwt "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4IiwiZXhwIjoxMDAwMDAwMDAwfQ.")
+       (jwks (list (cons "keys" (list (list (cons "alg" "none")))))))
+  ;; Without clock-skew it should be expired
+  (5am:signals (cl-oauth2:oauth2-error) (cl-oauth2:verify-jwt jwt jwks))))
+
+;;; Coverage: 16/28 functions tested
