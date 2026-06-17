@@ -8,13 +8,13 @@
 - [x] `introspect-token` — RFC 7662 token introspection endpoint support
 - [x] `revoke-token` — RFC 7009 token revocation
 
-## v0.3.0
+## v0.3.0 ✅
 
+- [x] HS256 (HMAC) signature verification
+- [x] JWK thumbprint calculation (RFC 7638)
+- [x] Token response hooks (`on-token-response` generic function)
+- [x] Configurable clock skew tolerance for JWT expiration
 - [ ] Full test coverage for `exchange-code`, `client-credentials-grant`, `poll-device-token` (mock HTTP layer)
-- [ ] HS256 (HMAC) signature verification
-- [ ] JWK thumbprint calculation (RFC 7638)
-- [ ] Token response hooks (for logging, metrics)
-- [ ] Configurable clock skew tolerance for JWT expiration
 
 ## Future
 
