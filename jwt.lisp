@@ -33,34 +33,31 @@
       (let ((exp (cdr (assoc "exp" claims :test #'string=))))
         (when (and exp (numberp exp) (< exp (- (get-universal-time) 2208988800)))
           (error 'oauth2-error :error-code "token_expired")))
-      ;; Verify signature (RS256)
-      (when (string= alg "RS256")
-        (let* ((n-b64 (cdr (assoc "n" jwk :test #'string=)))
-               (e-b64 (cdr (assoc "e" jwk :test #'string=)))
-               (signing-input (subseq jwt-string 0 (position #\. jwt-string :from-end t)))
-               (sig-bytes (cl-base64:base64-string-to-usb8-array
-                           (substitute #\+ #\- (substitute #\/ #\_ 
-                             (let ((m (mod (length sig-b64) 4)))
-                               (if (zerop m) sig-b64
-                                   (concatenate 'string sig-b64 (make-string (- 4 m) :initial-element #\=))))))))
-               (n-bytes (cl-base64:base64-string-to-usb8-array
-                         (substitute #\+ #\- (substitute #\/ #\_
-                           (let ((m (mod (length n-b64) 4)))
-                             (if (zerop m) n-b64
-                                 (concatenate 'string n-b64 (make-string (- 4 m) :initial-element #\=))))))))
-               (e-bytes (cl-base64:base64-string-to-usb8-array
-                         (substitute #\+ #\- (substitute #\/ #\_
-                           (let ((m (mod (length e-b64) 4)))
-                             (if (zerop m) e-b64
-                                 (concatenate 'string e-b64 (make-string (- 4 m) :initial-element #\=))))))))
-               (pub-key (ironclad:make-public-key :rsa
-                          :n (ironclad:octets-to-integer n-bytes)
-                          :e (ironclad:octets-to-integer e-bytes))))
-          (unless (ironclad:verify-signature pub-key :sha256
-                    (ironclad:digest-sequence :sha256
-                      (babel:string-to-octets signing-input :encoding :utf-8))
-                    sig-bytes)
-            (error 'oauth2-error :error-code "invalid_signature"))))
+      ;; Verify signature
+      (let ((signing-input (subseq jwt-string 0 (position #\. jwt-string :from-end t)))
+            (sig-bytes (base64url-decode sig-b64)))
+        (cond
+          ((string= alg "RS256")
+           (let* ((pub-key (ironclad:make-public-key :rsa
+                             :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
+                             :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=)))))))
+             (unless (ironclad:verify-signature pub-key :sha256
+                       (ironclad:digest-sequence :sha256
+                         (babel:string-to-octets signing-input :encoding :utf-8))
+                       sig-bytes)
+               (error 'oauth2-error :error-code "invalid_signature"))))
+          ((string= alg "ES256")
+           (let* ((x-bytes (base64url-decode (cdr (assoc "x" jwk :test #'string=))))
+                  (y-bytes (base64url-decode (cdr (assoc "y" jwk :test #'string=))))
+                  (pub-key (ironclad:make-public-key :secp256r1 :x x-bytes :y y-bytes))
+                  (msg-hash (ironclad:digest-sequence :sha256
+                              (babel:string-to-octets signing-input :encoding :utf-8)))
+                  ;; ES256 sig is r||s, each 32 bytes — convert to DER
+                  (r (subseq sig-bytes 0 32))
+                  (s (subseq sig-bytes 32 64)))
+             (unless (ironclad:verify-signature pub-key :sha256 msg-hash
+                       (ironclad:make-signature :secp256r1 :r r :s s))
+               (error 'oauth2-error :error-code "invalid_signature"))))))
       claims)))
 (defun decode-jwt (jwt-string)
   "Decode a JWT into header and payload alists without verification.
@@ -81,3 +78,11 @@ Returns (values header-alist payload-alist signature-bytes)."
       (values (decode-part header-b64)
               (decode-part payload-b64)
               sig-b64))))
+
+(defun base64url-decode (b64url)
+  "Decode a base64url string to octets."
+  (let* ((padded (let ((m (mod (length b64url) 4)))
+                   (if (zerop m) b64url
+                       (concatenate 'string b64url (make-string (- 4 m) :initial-element #\=))))))
+    (cl-base64:base64-string-to-usb8-array
+     (substitute #\+ #\- (substitute #\/ #\_ padded)))))

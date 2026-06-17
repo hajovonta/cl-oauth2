@@ -53,3 +53,31 @@
     (when code-verifier
       (push (cons "code_verifier" code-verifier) params))
     (request-token client params)))
+
+(defun revoke-token (client token &key token-type-hint revocation-uri)
+  "Revoke a token at the provider's revocation endpoint (RFC 7009)."
+  (let ((params (list (cons "token" token)
+                      (cons "client_id" (client-id client)))))
+    (when (client-secret client)
+      (push (cons "client_secret" (client-secret client)) params))
+    (when token-type-hint
+      (push (cons "token_type_hint" token-type-hint) params))
+    (dex:post (or revocation-uri
+                  (format nil "~A/revoke" (token-uri client)))
+              :content params
+              :headers '(("Accept" . "application/json")))
+    (values)))
+
+(defun introspect-token (client token &key token-type-hint introspection-uri)
+  "Introspect a token at the provider's introspection endpoint (RFC 7662)."
+  (let ((params (list (cons "token" token)
+                      (cons "client_id" (client-id client)))))
+    (when (client-secret client)
+      (push (cons "client_secret" (client-secret client)) params))
+    (when token-type-hint
+      (push (cons "token_type_hint" token-type-hint) params))
+    (let ((body (dex:post (or introspection-uri
+                              (format nil "~A/introspect" (token-uri client)))
+                          :content params
+                          :headers '(("Accept" . "application/json")))))
+      (yason:parse body :object-as :alist :object-key-fn #'identity))))

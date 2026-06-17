@@ -122,4 +122,43 @@
        (claims (cl-oauth2:verify-jwt jwt jwks :issuer "https://ok.com" :audience "app")))
   (is (string= "user" (cdr (assoc "sub" claims :test #'string=))))))
 
-;;; Coverage: 8/17 functions tested
+(test cache-put-get
+  (let ((c (cl-oauth2:make-cache :max-entries 2)))
+  (is (= 0 (hash-table-count (cl-oauth2:cache-entries c))))
+  (cl-oauth2:cache-put c "k1" (make-instance 'cl-oauth2:token-response
+                                             :access-token "t1" :expires-at (+ (get-universal-time) 3600)))
+  (is (= 1 (hash-table-count (cl-oauth2:cache-entries c))))
+  (let ((tok (cl-oauth2:cache-get c "k1")))
+    (is (string= "t1" (cl-oauth2:access-token tok))))))
+
+(test cache-expired-eviction
+  (let ((c (cl-oauth2:make-cache :max-entries 2)))
+  (cl-oauth2:cache-put c "k1" (make-instance 'cl-oauth2:token-response
+                                             :access-token "old" :expires-at (- (get-universal-time) 100)))
+  ;; Expired token should be evicted on get
+  (is (null (cl-oauth2:cache-get c "k1")))))
+
+(test cache-max-entries
+  (let ((c (cl-oauth2:make-cache :max-entries 2)))
+  (cl-oauth2:cache-put c "k1" (make-instance 'cl-oauth2:token-response :access-token "t1" :expires-at (+ (get-universal-time) 3600)))
+  (cl-oauth2:cache-put c "k2" (make-instance 'cl-oauth2:token-response :access-token "t2" :expires-at (+ (get-universal-time) 3600)))
+  ;; At capacity — next put should evict one
+  (cl-oauth2:cache-put c "k3" (make-instance 'cl-oauth2:token-response :access-token "t3" :expires-at (+ (get-universal-time) 3600)))
+  (is (<= (hash-table-count (cl-oauth2:cache-entries c)) 2))))
+
+(test make-cache-defaults
+  (is (= 64 (cl-oauth2:cache-max-entries (cl-oauth2:make-cache))))
+(is (= 10 (cl-oauth2:cache-max-entries (cl-oauth2:make-cache :max-entries 10)))))
+
+(test base64url-decode-basic
+  (let ((bytes (cl-oauth2::base64url-decode "SGVsbG8")))
+  (is (string= "Hello" (babel:octets-to-string bytes :encoding :utf-8)))))
+
+(test base64url-decode-special-chars
+  ;; base64url uses - and _ instead of + and /
+(let* ((standard "ab+c/d==")
+       (urlsafe "ab-c_d")
+       (result (cl-oauth2::base64url-decode urlsafe)))
+  (is (equalp result (cl-base64:base64-string-to-usb8-array standard)))))
+
+;;; Coverage: 12/24 functions tested
