@@ -82,7 +82,7 @@ Returns (values header-alist payload-alist signature-bytes)."
               (input-bytes (babel:string-to-octets signing-input :encoding :utf-8)))
          (ironclad:update-mac mac input-bytes)
          (let ((expected (ironclad:produce-mac mac)))
-           (unless (equalp expected sig-bytes)
+           (unless (ironclad:constant-time-equal expected sig-bytes)
              (error 'oauth2-error :error-code "invalid_signature"))))))))
 
 (defun validate-claims (claims &key issuer audience (clock-skew 0))
@@ -96,7 +96,7 @@ CLOCK-SKEW is seconds of tolerance for expiration."
       (unless (if (listp aud) (member audience aud :test #'string=) (string= audience aud))
         (error 'oauth2-error :error-code "invalid_audience"))))
   (let ((exp (cdr (assoc "exp" claims :test #'string=))))
-    (when (and exp (numberp exp) (< (+ exp clock-skew) (- (get-universal-time) 2208988800)))
+    (when (and exp (numberp exp) (< (+ exp clock-skew) (- (get-universal-time) +unix-epoch-offset+)))
       (error 'oauth2-error :error-code "token_expired"))))
 
 (defun base64url-encode (octets)

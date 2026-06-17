@@ -47,7 +47,9 @@
 
 
 
+
 (defgeneric oauth2-error-code ())
+
 
 
 
@@ -57,7 +59,9 @@
 
 
 
+
 (defgeneric redirect-uri ())
+
 
 
 
@@ -67,7 +71,9 @@
 
 
 
+
 (defgeneric authorize-uri ())
+
 
 
 
@@ -77,7 +83,9 @@
 
 
 
+
 (defgeneric client-id ())
+
 
 
 
@@ -87,7 +95,9 @@
 
 
 
+
 (defgeneric id-token ())
+
 
 
 
@@ -97,7 +107,9 @@
 
 
 
+
 (defgeneric expires-at ())
+
 
 
 
@@ -118,3 +130,7 @@
 
 
 
+
+
+(defconstant +unix-epoch-offset+ 2208988800
+  "Seconds between CL universal time epoch (1900-01-01) and Unix epoch (1970-01-01).")
