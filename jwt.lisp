@@ -21,43 +21,11 @@
                     (first keys))))
       (unless jwk
         (error 'oauth2-error :error-code "invalid_key" :error-description "No matching JWK found"))
-      ;; Verify claims
-      (when issuer
-        (unless (string= issuer (cdr (assoc "iss" claims :test #'string=)))
-          (error 'oauth2-error :error-code "invalid_issuer")))
-      (when audience
-        (let ((aud (cdr (assoc "aud" claims :test #'string=))))
-          (unless (if (listp aud) (member audience aud :test #'string=) (string= audience aud))
-            (error 'oauth2-error :error-code "invalid_audience"))))
-      ;; Check expiration
-      (let ((exp (cdr (assoc "exp" claims :test #'string=))))
-        (when (and exp (numberp exp) (< exp (- (get-universal-time) 2208988800)))
-          (error 'oauth2-error :error-code "token_expired")))
-      ;; Verify signature
-      (let ((signing-input (subseq jwt-string 0 (position #\. jwt-string :from-end t)))
-            (sig-bytes (base64url-decode sig-b64)))
-        (cond
-          ((string= alg "RS256")
-           (let* ((pub-key (ironclad:make-public-key :rsa
-                             :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
-                             :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=)))))))
-             (unless (ironclad:verify-signature pub-key :sha256
-                       (ironclad:digest-sequence :sha256
-                         (babel:string-to-octets signing-input :encoding :utf-8))
-                       sig-bytes)
-               (error 'oauth2-error :error-code "invalid_signature"))))
-          ((string= alg "ES256")
-           (let* ((x-bytes (base64url-decode (cdr (assoc "x" jwk :test #'string=))))
-                  (y-bytes (base64url-decode (cdr (assoc "y" jwk :test #'string=))))
-                  (pub-key (ironclad:make-public-key :secp256r1 :x x-bytes :y y-bytes))
-                  (msg-hash (ironclad:digest-sequence :sha256
-                              (babel:string-to-octets signing-input :encoding :utf-8)))
-                  ;; ES256 sig is r||s, each 32 bytes — convert to DER
-                  (r (subseq sig-bytes 0 32))
-                  (s (subseq sig-bytes 32 64)))
-             (unless (ironclad:verify-signature pub-key :sha256 msg-hash
-                       (ironclad:make-signature :secp256r1 :r r :s s))
-               (error 'oauth2-error :error-code "invalid_signature"))))))
+      (validate-claims claims :issuer issuer :audience audience)
+      (when (member alg '("RS256" "ES256") :test #'string=)
+        (verify-signature alg jwk
+                          (subseq jwt-string 0 (position #\. jwt-string :from-end t))
+                          (base64url-decode sig-b64)))
       claims)))
 (defun decode-jwt (jwt-string)
   "Decode a JWT into header and payload alists without verification.
@@ -86,3 +54,37 @@ Returns (values header-alist payload-alist signature-bytes)."
                        (concatenate 'string b64url (make-string (- 4 m) :initial-element #\=))))))
     (cl-base64:base64-string-to-usb8-array
      (substitute #\+ #\- (substitute #\/ #\_ padded)))))
+
+(defun verify-signature (alg jwk signing-input sig-bytes)
+  "Verify a JWT signature given the algorithm, JWK, signing input, and signature bytes."
+  (let ((msg-hash (ironclad:digest-sequence :sha256
+                    (babel:string-to-octets signing-input :encoding :utf-8))))
+    (cond
+      ((string= alg "RS256")
+       (let ((pub-key (ironclad:make-public-key :rsa
+                        :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
+                        :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=)))))))
+         (unless (ironclad:verify-signature pub-key :sha256 msg-hash sig-bytes)
+           (error 'oauth2-error :error-code "invalid_signature"))))
+      ((string= alg "ES256")
+       (let* ((pub-key (ironclad:make-public-key :secp256r1
+                         :x (base64url-decode (cdr (assoc "x" jwk :test #'string=)))
+                         :y (base64url-decode (cdr (assoc "y" jwk :test #'string=)))))
+              (r (subseq sig-bytes 0 32))
+              (s (subseq sig-bytes 32 64)))
+         (unless (ironclad:verify-signature pub-key :sha256 msg-hash
+                   (ironclad:make-signature :secp256r1 :r r :s s))
+           (error 'oauth2-error :error-code "invalid_signature")))))))
+
+(defun validate-claims (claims &key issuer audience)
+  "Validate JWT claims: issuer, audience, expiration. Signals oauth2-error on mismatch."
+  (when issuer
+    (unless (string= issuer (cdr (assoc "iss" claims :test #'string=)))
+      (error 'oauth2-error :error-code "invalid_issuer")))
+  (when audience
+    (let ((aud (cdr (assoc "aud" claims :test #'string=))))
+      (unless (if (listp aud) (member audience aud :test #'string=) (string= audience aud))
+        (error 'oauth2-error :error-code "invalid_audience"))))
+  (let ((exp (cdr (assoc "exp" claims :test #'string=))))
+    (when (and exp (numberp exp) (< exp (- (get-universal-time) 2208988800)))
+      (error 'oauth2-error :error-code "token_expired"))))

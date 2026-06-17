@@ -45,37 +45,49 @@
 (defgeneric oauth2-error-description ())
 
 
+
 (defgeneric oauth2-error-code ())
+
 
 
 (defgeneric client-scopes ())
 
 
+
 (defgeneric redirect-uri ())
+
 
 
 (defgeneric token-uri ())
 
 
+
 (defgeneric authorize-uri ())
+
 
 
 (defgeneric client-secret ())
 
 
+
 (defgeneric client-id ())
+
 
 
 (defgeneric token-scope ())
 
 
+
 (defgeneric id-token ())
+
 
 
 (defgeneric token-type ())
 
 
+
 (defgeneric expires-at ())
+
 
 
 (defun refresh-token (client token-response)
@@ -91,4 +103,5 @@
     (request-token client params)))
 
 (defgeneric access-token ())
+
 

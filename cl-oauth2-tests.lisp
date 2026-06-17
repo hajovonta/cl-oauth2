@@ -161,4 +161,4 @@
        (result (cl-oauth2::base64url-decode urlsafe)))
   (is (equalp result (cl-base64:base64-string-to-usb8-array standard)))))
 
-;;; Coverage: 12/24 functions tested
+;;; Coverage: 12/26 functions tested
