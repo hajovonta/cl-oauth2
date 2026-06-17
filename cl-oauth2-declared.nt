@@ -180,3 +180,60 @@
 <cl-oauth2:base64url-decode> <cg:docstring> "Decode a base64url string to octets." .
 <cl-oauth2:base64url-decode> <cg:sourceText> "(defun base64url-decode (b64url)\n  \"Decode a base64url string to octets.\"\n  (let* ((padded (let ((m (mod (length b64url) 4)))\n                   (if (zerop m) b64url\n                       (concatenate 'string b64url (make-string (- 4 m) :initial-element #\\=))))))\n    (cl-base64:base64-string-to-usb8-array\n     (substitute #\\+ #\\- (substitute #\\/ #\\_ padded)))))" .
 <cl-oauth2:verify-jwt> <cg:calls> <cl-oauth2:base64url-decode> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:request-token> .
+<cl-oauth2:access-token> <rdf:type> <generic-function> .
+<cl-oauth2:access-token> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:access-token> .
+<cl-oauth2:access-token> <cg:docstring> "Reader for token-response access-token slot." .
+<cl-oauth2:token-type> <rdf:type> <generic-function> .
+<cl-oauth2:token-type> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:token-type> .
+<cl-oauth2:token-type> <cg:docstring> "Reader for token-response token-type slot." .
+<cl-oauth2:expires-at> <rdf:type> <generic-function> .
+<cl-oauth2:expires-at> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:expires-at> .
+<cl-oauth2:expires-at> <cg:docstring> "Reader for token-response expires-at slot." .
+<cl-oauth2:refresh-token> <rdf:type> <generic-function> .
+<cl-oauth2:refresh-token> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:refresh-token> .
+<cl-oauth2:refresh-token> <cg:docstring> "Reader for token-response refresh-token slot." .
+<cl-oauth2:id-token> <rdf:type> <generic-function> .
+<cl-oauth2:id-token> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:id-token> .
+<cl-oauth2:id-token> <cg:docstring> "Reader for token-response id-token slot." .
+<cl-oauth2:token-scope> <rdf:type> <generic-function> .
+<cl-oauth2:token-scope> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:token-scope> .
+<cl-oauth2:token-scope> <cg:docstring> "Reader for token-response scope slot." .
+<cl-oauth2:client-id> <rdf:type> <generic-function> .
+<cl-oauth2:client-id> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:client-id> .
+<cl-oauth2:client-id> <cg:docstring> "Reader for oauth2-client client-id slot." .
+<cl-oauth2:client-secret> <rdf:type> <generic-function> .
+<cl-oauth2:client-secret> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:client-secret> .
+<cl-oauth2:client-secret> <cg:docstring> "Reader for oauth2-client client-secret slot." .
+<cl-oauth2:authorize-uri> <rdf:type> <generic-function> .
+<cl-oauth2:authorize-uri> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:authorize-uri> .
+<cl-oauth2:authorize-uri> <cg:docstring> "Reader for oauth2-client authorize-uri slot." .
+<cl-oauth2:token-uri> <rdf:type> <generic-function> .
+<cl-oauth2:token-uri> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:token-uri> .
+<cl-oauth2:token-uri> <cg:docstring> "Reader for oauth2-client token-uri slot." .
+<cl-oauth2:redirect-uri> <rdf:type> <generic-function> .
+<cl-oauth2:redirect-uri> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:redirect-uri> .
+<cl-oauth2:redirect-uri> <cg:docstring> "Reader for oauth2-client redirect-uri slot." .
+<cl-oauth2:client-scopes> <rdf:type> <generic-function> .
+<cl-oauth2:client-scopes> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:client-scopes> .
+<cl-oauth2:client-scopes> <cg:docstring> "Reader for oauth2-client scopes slot." .
+<cl-oauth2:oauth2-error-code> <rdf:type> <generic-function> .
+<cl-oauth2:oauth2-error-code> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:oauth2-error-code> .
+<cl-oauth2:oauth2-error-code> <cg:docstring> "Reader for oauth2-error error-code slot." .
+<cl-oauth2:oauth2-error-description> <rdf:type> <generic-function> .
+<cl-oauth2:oauth2-error-description> <cg:inPackage> <pkg:cl-oauth2> .
+<pkg:cl-oauth2> <cg:exports> <cl-oauth2:oauth2-error-description> .
+<cl-oauth2:oauth2-error-description> <cg:docstring> "Reader for oauth2-error error-description slot." .

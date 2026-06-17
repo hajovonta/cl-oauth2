@@ -41,3 +41,54 @@
    (redirect-uri :initarg :redirect-uri :reader redirect-uri :initform nil)
    (scopes :initarg :scopes :reader client-scopes :initform nil))
   (:documentation "OAuth2 client configuration."))
+
+(defgeneric oauth2-error-description ())
+
+
+(defgeneric oauth2-error-code ())
+
+
+(defgeneric client-scopes ())
+
+
+(defgeneric redirect-uri ())
+
+
+(defgeneric token-uri ())
+
+
+(defgeneric authorize-uri ())
+
+
+(defgeneric client-secret ())
+
+
+(defgeneric client-id ())
+
+
+(defgeneric token-scope ())
+
+
+(defgeneric id-token ())
+
+
+(defgeneric token-type ())
+
+
+(defgeneric expires-at ())
+
+
+(defun refresh-token (client token-response)
+  "Refresh an expired token using its refresh-token."
+  (unless (refresh-token token-response)
+    (error 'oauth2-error :error-code "no_refresh_token"
+                         :error-description "Token response has no refresh_token"))
+  (let ((params (list (cons "grant_type" "refresh_token")
+                      (cons "refresh_token" (refresh-token token-response))
+                      (cons "client_id" (client-id client)))))
+    (when (client-secret client)
+      (push (cons "client_secret" (client-secret client)) params))
+    (request-token client params)))
+
+(defgeneric access-token ())
+

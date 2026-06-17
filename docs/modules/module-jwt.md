@@ -1,11 +1,12 @@
 # Module: jwt
 
-**Functions:** 4
+**Functions:** 5
 
 **Depends on:** core
 
 ## Contents
 
+- `base64url-decode`
 - `decode-jwt`
 - `jwt-claims`
 - `jwt-header`

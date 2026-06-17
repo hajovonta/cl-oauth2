@@ -1,6 +1,6 @@
 # Module: token
 
-**Functions:** 5
+**Functions:** 7
 
 **Depends on:** core
 
@@ -8,7 +8,9 @@
 
 - `client-credentials-grant`
 - `exchange-code`
+- `introspect-token`
 - `refresh`
 - `refresh-token`
 - `request-token`
+- `revoke-token`
 
