@@ -1,22 +1,22 @@
 (in-package #:cl-oauth2)
 
-(defun format-auth-header (token-response)
-  "Return Authorization header value (e.g. \"Bearer xxx\")."
-  (format nil "~A ~A" (token-type token-response) (access-token token-response)))
-(defun token-expired-p (token-response)
-  "Return T if token has expired (with 30s grace period)."
-  (let ((expires (expires-at token-response)))
-    (or (null expires)
-        (< expires (+ (get-universal-time) 30)))))
-(defun make-client (&key client-id client-secret authorize-uri token-uri redirect-uri scopes)
-  "Create an oauth2-client instance."
-  (make-instance 'oauth2-client
-                 :client-id client-id
-                 :client-secret client-secret
-                 :authorize-uri authorize-uri
-                 :token-uri token-uri
-                 :redirect-uri redirect-uri
-                 :scopes scopes))
+(defconstant +unix-epoch-offset+ 2208988800
+  "Seconds between CL universal time epoch (1900-01-01) and Unix epoch (1970-01-01).")
+
+(defgeneric oauth2-error-description (condition))
+(defgeneric oauth2-error-code (condition))
+(defgeneric client-scopes (client))
+(defgeneric redirect-uri (client))
+(defgeneric token-uri (client))
+(defgeneric authorize-uri (client))
+(defgeneric client-secret (client))
+(defgeneric client-id (client))
+(defgeneric token-scope (response))
+(defgeneric id-token (response))
+(defgeneric token-type (response))
+(defgeneric expires-at (response))
+(defgeneric access-token (response))
+
 (define-condition oauth2-error (error)
   ((error-code :initarg :error-code :reader oauth2-error-code)
    (error-description :initarg :error-description :reader oauth2-error-description
@@ -42,77 +42,23 @@
    (scopes :initarg :scopes :reader client-scopes :initform nil))
   (:documentation "OAuth2 client configuration."))
 
-(defgeneric oauth2-error-description ())
-
-
-
-
-
-(defgeneric oauth2-error-code ())
-
-
-
-
-
-(defgeneric client-scopes ())
-
-
-
-
-
-(defgeneric redirect-uri ())
-
-
-
-
-
-(defgeneric token-uri ())
-
-
-
-
-
-(defgeneric authorize-uri ())
-
-
-
-
-
-(defgeneric client-secret ())
-
-
-
-
-
-(defgeneric client-id ())
-
-
-
-
-
-(defgeneric token-scope ())
-
-
-
-
-
-(defgeneric id-token ())
-
-
-
-
-
-(defgeneric token-type ())
-
-
-
-
-
-(defgeneric expires-at ())
-
-
-
-
+(defun format-auth-header (token-response)
+  "Return Authorization header value (e.g. \"Bearer xxx\")."
+  (format nil "~A ~A" (token-type token-response) (access-token token-response)))
+(defun token-expired-p (token-response)
+  "Return T if token has expired (with 30s grace period)."
+  (let ((expires (expires-at token-response)))
+    (or (null expires)
+        (< expires (+ (get-universal-time) 30)))))
+(defun make-client (&key client-id client-secret authorize-uri token-uri redirect-uri scopes)
+  "Create an oauth2-client instance."
+  (make-instance 'oauth2-client
+                 :client-id client-id
+                 :client-secret client-secret
+                 :authorize-uri authorize-uri
+                 :token-uri token-uri
+                 :redirect-uri redirect-uri
+                 :scopes scopes))
 
 (defun refresh-token (client token-response)
   "Refresh an expired token using its refresh-token."
@@ -126,11 +72,3 @@
       (push (cons "client_secret" (client-secret client)) params))
     (request-token client params)))
 
-(defgeneric access-token ())
-
-
-
-
-
-(defconstant +unix-epoch-offset+ 2208988800
-  "Seconds between CL universal time epoch (1900-01-01) and Unix epoch (1970-01-01).")
