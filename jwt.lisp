@@ -65,7 +65,7 @@ Returns (values header-alist payload-alist signature-bytes)."
        (let ((pub-key (ironclad:make-public-key :rsa
                         :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
                         :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=)))))))
-         (unless (ironclad:verify-signature pub-key :sha256 msg-hash sig-bytes)
+         (unless (ironclad:verify-signature pub-key msg-hash sig-bytes)
            (error 'oauth2-error :error-code "invalid_signature"))))
       ((string= alg "ES256")
        (let* ((pub-key (ironclad:make-public-key :secp256r1
@@ -73,7 +73,7 @@ Returns (values header-alist payload-alist signature-bytes)."
                          :y (base64url-decode (cdr (assoc "y" jwk :test #'string=)))))
               (r (subseq sig-bytes 0 32))
               (s (subseq sig-bytes 32 64)))
-         (unless (ironclad:verify-signature pub-key :sha256 msg-hash
+         (unless (ironclad:verify-signature pub-key msg-hash
                    (ironclad:make-signature :secp256r1 :r r :s s))
            (error 'oauth2-error :error-code "invalid_signature"))))
       ((string= alg "HS256")
