@@ -61,18 +61,39 @@ Returns (values header-alist payload-alist signature-bytes)."
   (let ((input-bytes (babel:string-to-octets signing-input :encoding :utf-8)))
     (cond
       ((string= alg "RS256")
-       (let ((pub-key (ironclad:make-public-key :rsa
-                        :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
-                        :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=)))))))
-         (unless (ironclad:verify-signature pub-key input-bytes sig-bytes)
+       ;; RS256 = RSASSA-PKCS1-v1_5 with SHA-256
+       ;; Ironclad does raw RSA (no PKCS#1 v1.5 padding internally),
+       ;; so we must construct the expected EMSA-PKCS1-v1_5 encoded message.
+       (let* ((pub-key (ironclad:make-public-key :rsa
+                         :n (ironclad:octets-to-integer (base64url-decode (cdr (assoc "n" jwk :test #'string=))))
+                         :e (ironclad:octets-to-integer (base64url-decode (cdr (assoc "e" jwk :test #'string=))))))
+              (digest (ironclad:digest-sequence :sha256 input-bytes))
+              (nbits (integer-length (slot-value pub-key 'ironclad::n)))
+              (em-len (ceiling nbits 8))
+              ;; DigestInfo for SHA-256: DER-encoded AlgorithmIdentifier + digest
+              (digest-info (concatenate '(vector (unsigned-byte 8))
+                            #(#x30 #x31 #x30 #x0d #x06 #x09 #x60 #x86 #x48 #x01
+                              #x65 #x03 #x04 #x02 #x01 #x05 #x00 #x04 #x20)
+                            digest))
+              ;; EMSA-PKCS1-v1_5: 00 01 PS 00 DigestInfo
+              (ps-len (- em-len (length digest-info) 3))
+              (em (make-array em-len :element-type '(unsigned-byte 8) :initial-element #xff)))
+         (setf (aref em 0) #x00
+               (aref em 1) #x01
+               (aref em (+ 2 ps-len)) #x00)
+         (replace em digest-info :start1 (+ 3 ps-len))
+         (unless (ironclad:verify-signature pub-key em sig-bytes)
            (error 'oauth2-error :error-code "invalid_signature"))))
       ((string= alg "ES256")
+       ;; ES256 = ECDSA with P-256 and SHA-256
+       ;; For ECDSA, Ironclad expects the hash as the message.
        (let* ((pub-key (ironclad:make-public-key :secp256r1
                          :x (base64url-decode (cdr (assoc "x" jwk :test #'string=)))
                          :y (base64url-decode (cdr (assoc "y" jwk :test #'string=)))))
+              (digest (ironclad:digest-sequence :sha256 input-bytes))
               (r (subseq sig-bytes 0 32))
               (s (subseq sig-bytes 32 64)))
-         (unless (ironclad:verify-signature pub-key input-bytes
+         (unless (ironclad:verify-signature pub-key digest
                    (ironclad:make-signature :secp256r1 :r r :s s))
            (error 'oauth2-error :error-code "invalid_signature"))))
       ((string= alg "HS256")
